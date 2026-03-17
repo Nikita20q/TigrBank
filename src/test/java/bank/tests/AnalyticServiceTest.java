@@ -1,7 +1,7 @@
-package Bank.Tests;
+package bank.tests;
 
-import Bank.domain.Category;
-import Bank.domain.Operation;
+import Bank.domain.model.Category;
+import Bank.domain.model.Operation;
 import Bank.domain.enums.FlowDirection;
 import Bank.repository.CategoryRepository;
 import Bank.repository.OperationRepository;

@@ -1,7 +1,9 @@
-package Bank.Tests;
+package bank.tests;
 
-import Bank.domain.Category;
+import Bank.domain.factory.CategoryFactory;
+import Bank.domain.model.Category;
 import Bank.domain.enums.FlowDirection;
+import Bank.domain.params.CategoryParams;
 import Bank.repository.CategoryRepository;
 import Bank.service.CategoryService;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,27 +20,40 @@ public class CategoryServiceTest {
 
     private CategoryRepository mockRepo;
     private CategoryService categoryService;
+    private CategoryFactory mockFactory;
 
     @BeforeEach
     public void setup() {
         mockRepo = Mockito.mock(CategoryRepository.class);
-        categoryService = new CategoryService(mockRepo);
+        mockFactory = Mockito.mock(CategoryFactory.class);
+        categoryService = new CategoryService(mockRepo, mockFactory);
     }
 
     @Test
     public void shouldCreateCategorySuccessfully() {
+        String name = "Кафе";
+        FlowDirection direction = FlowDirection.OUTCOME;
+
+        Category expectedCategory = new Category(
+                UUID.randomUUID(),
+                name,
+                direction
+        );
+
+        when(mockFactory.createWithParams(any(CategoryParams.class))).thenReturn(expectedCategory);
         doNothing().when(mockRepo).addCategory(any(Category.class));
 
-        String name = "Кафе";
-        Category created = categoryService.createCategory(name, FlowDirection.OUTCOME);
+        Category created = categoryService.createCategory(name, direction);
 
         assertNotNull(created);
         assertEquals(name, created.getName());
-        assertEquals(FlowDirection.OUTCOME, created.getDirection());
+        assertEquals(direction, created.getFlowDirection());
         assertNotNull(created.getId());
 
+        verify(mockFactory, times(1)).createWithParams(any(CategoryParams.class));
         verify(mockRepo, times(1)).addCategory(any(Category.class));
     }
+
 
     @Test
     public void shouldFindCategoryByNameAndType() {
@@ -52,7 +67,9 @@ public class CategoryServiceTest {
 
         assertNotNull(found);
         assertEquals(name, found.getName());
-        assertEquals(type, found.getDirection());
+        assertEquals(type, found.getFlowDirection());
+
+        verify(mockFactory, never()).createWithParams(any());
         verify(mockRepo).findByNameAndType(name, type);
     }
 
@@ -76,6 +93,8 @@ public class CategoryServiceTest {
 
         verify(mockRepo).existsById(id);
         verify(mockRepo).deleteById(id);
+
+        verify(mockFactory, never()).createWithParams(any());
     }
 
     @Test
@@ -87,5 +106,7 @@ public class CategoryServiceTest {
 
         verify(mockRepo).existsById(fakeId);
         verify(mockRepo, never()).deleteById(fakeId);
+
+        verify(mockFactory, never()).createWithParams(any());
     }
 }

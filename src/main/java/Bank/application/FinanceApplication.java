@@ -1,9 +1,13 @@
 package Bank.application;
 
-import Bank.domain.BankAccount;
-import Bank.domain.Category;
+import Bank.domain.Command.Command;
+import Bank.domain.Command.CommandInvoker;
+import Bank.domain.Command.DepositCommand;
+import Bank.domain.Command.WithdrawCommand;
+import Bank.domain.model.BankAccount;
+import Bank.domain.model.Category;
 import Bank.domain.enums.FlowDirection;
-import Bank.repository.BankAccountRepository;
+import Bank.domain.model.Operation;
 import Bank.service.*;
 import Bank.service.Files.*;
 import org.springframework.stereotype.Service;
@@ -19,19 +23,21 @@ import java.util.UUID;
 
 @Service
 public class FinanceApplication {
-    private AnalyticsService analyticsService;
-    private BalanceRecalculationService balanceRecalculationService;
-    private OperationService operationService;
-    private AccountService accountService;
-    private CategoryService categoryService;
-    private DataTransferService dataTransferService;
-    public FinanceApplication(AnalyticsService analyticsService, BalanceRecalculationService balanceRecalculationService, OperationService operationService, AccountService accountService, CategoryService categoryService, DataTransferService dataTransferService) {
+    private final AnalyticsService analyticsService;
+    private final BalanceRecalculationService balanceRecalculationService;
+    private final OperationService operationService;
+    private final AccountService accountService;
+    private final CategoryService categoryService;
+    private final DataTransferService dataTransferService;
+    private final CommandInvoker commandInvoker;
+    public FinanceApplication(AnalyticsService analyticsService, BalanceRecalculationService balanceRecalculationService, OperationService operationService, AccountService accountService, CategoryService categoryService, DataTransferService dataTransferService, CommandInvoker commandInvoker) {
         this.analyticsService = analyticsService;
         this.balanceRecalculationService = balanceRecalculationService;
         this.operationService = operationService;
         this.accountService = accountService;
         this.categoryService = categoryService;
         this.dataTransferService = dataTransferService;
+        this.commandInvoker = commandInvoker;
     }
 
     public void createAccount(String name) {
@@ -77,9 +83,9 @@ public class FinanceApplication {
 
             Category category = getOrCreateCategory(categoryName, FlowDirection.OUTCOME);
 
-            boolean success = operationService.withdraw(account, amount, category, "Расход: " + categoryName);
+            Operation operation = operationService.withdraw(account, amount, category, "Расход: " + categoryName);
 
-            if (success) {
+            if (operation != null) {
                 System.out.println("Успешно снято " + amount + " RUB (Категория: " + categoryName + ")");
                 System.out.println("Новый баланс: " + account.getBalance());
             } else {
@@ -217,21 +223,31 @@ public class FinanceApplication {
             System.out.printf("   %-20s: %10s RUB%n", cat.getName(), sum);
         }
     }
-    public void exportData(String filename, Exporter exporter) {
+    public void importData(String filename, String extension) {
         try {
-            dataTransferService.exportAll(filename, exporter);
-            System.out.println("Данные успешно экспортированы в формате " + exporter.getFileExtension().toUpperCase() + ".");
+            if (!dataTransferService.canImport(extension)) {
+                System.out.println("Формат не поддерживается: " + extension);
+                return;
+            }
+            String fullPath = filename + "." + extension;
+            dataTransferService.importAll(fullPath, extension);
+            System.out.println("Импорт завершён");
         } catch (IOException e) {
-            System.out.println("Ошибка при экспорте: " + e.getMessage());
+            System.out.println("Ошибка импорта: " + e.getMessage());
         }
     }
-    public void importData(String filename, Importer importer) {
+
+    public void exportData(String filename, String extension) {
         try {
-            dataTransferService.importAll(filename, importer);
-            System.out.println("Данные успешно импортированы из формата " + importer.getFileExtension().toUpperCase() + ".");
+            if (!dataTransferService.canExport(extension)) {
+                System.out.println("Формат не поддерживается: " + extension);
+                return;
+            }
+            String fullPath = filename + "." + extension;
+            dataTransferService.exportAll(fullPath, extension);
+            System.out.println("Экспорт завершён");
         } catch (IOException e) {
-            System.out.println("Ошибка при импорте: " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("Ошибка экспорта: " + e.getMessage());
         }
     }
 
@@ -243,5 +259,29 @@ public class FinanceApplication {
         } else {
             System.out.println("Баланс счёта корректен");
         }
+    }
+
+    public void depositWithCommand(String accountId, BigDecimal amount, String categoryName) {
+        Command cmd = new DepositCommand(
+                accountService, operationService, categoryService,
+                balanceRecalculationService, accountId, amount, categoryName
+        );
+        commandInvoker.execute(cmd);
+    }
+
+    public void withdrawWithCommand(String accountId, BigDecimal amount, String categoryName) {
+        Command cmd = new WithdrawCommand(
+                accountService, operationService, categoryService,
+                balanceRecalculationService, accountId, amount, categoryName
+        );
+        commandInvoker.execute(cmd);
+    }
+
+    public void undoLast() {
+        commandInvoker.undoLast();
+    }
+
+    public void showCommandHistory() {
+        commandInvoker.showHistory();
     }
 }

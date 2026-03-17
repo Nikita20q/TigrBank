@@ -1,72 +1,48 @@
 package Bank.service.Files;
 
-import Bank.domain.BankAccount;
-import Bank.domain.Category;
-import Bank.domain.Operation;
-import Bank.domain.enums.FlowDirection;
+import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.*;
 
-public class CsvImporter implements Importer {
+@Component
+public class CsvImporter extends BaseImporter {
 
     @Override
-    public List<BankAccount> importAccounts(String csvData) {
-        List<BankAccount> accounts = new ArrayList<>();
-        String[] lines = csvData.split("\n");
-        for (int i = 1; i < lines.length; i++) {
-            String line = lines[i].trim();
-            if (line.isEmpty()) continue;
-            String[] parts = parseCsvLine(line);
-            UUID id = UUID.fromString(parts[0]);
-            String name = unescape(parts[1]);
-            BigDecimal balance = new BigDecimal(unescape(parts[2]));
-            accounts.add(new BankAccount(id, name, balance));
-        }
-        return accounts;
+    public String getFileExtension() {
+        return "csv";
     }
 
     @Override
-    public List<Category> importCategories(String csvData) {
-        List<Category> categories = new ArrayList<>();
-        String[] lines = csvData.split("\n");
-        for (int i = 1; i < lines.length; i++) {
-            String line = lines[i].trim();
-            if (line.isEmpty()) continue;
-            String[] parts = parseCsvLine(line);
-            UUID id = UUID.fromString(parts[0]);
-            String name = unescape(parts[1]);
-            FlowDirection direction = FlowDirection.valueOf(unescape(parts[2]));
-            categories.add(new Category(id, name, direction));
-        }
-        return categories;
-    }
+    protected List<Map<String, String>> parseRecords(String rawData) {
+        List<Map<String, String>> records = new ArrayList<>();
+        String[] lines = rawData.split("\n");
 
-    @Override
-    public List<Operation> importOperations(String csvData) {
-        List<Operation> operations = new ArrayList<>();
-        String[] lines = csvData.split("\n");
+        if (lines.length < 2) {
+            return records;
+        }
+
+        String[] headers = parseCsvLine(lines[0].trim());
+
         for (int i = 1; i < lines.length; i++) {
             String line = lines[i].trim();
             if (line.isEmpty()) continue;
-            String[] parts = parseCsvLine(line);
-            UUID id = UUID.fromString(parts[0]);
-            UUID accountId = UUID.fromString(parts[1]);
-            UUID categoryId = UUID.fromString(parts[2]);
-            FlowDirection type = FlowDirection.valueOf(unescape(parts[3]));
-            BigDecimal amount = new BigDecimal(unescape(parts[4]));
-            LocalDateTime date = LocalDateTime.parse(unescape(parts[5]));
-            String description = unescape(parts[6]);
-            operations.add(new Operation(id, accountId, categoryId, type, amount, date, description));
+
+            String[] values = parseCsvLine(line);
+            Map<String, String> record = new HashMap<>();
+
+            for (int j = 0; j < Math.min(headers.length, values.length); j++) {
+                record.put(headers[j], unescapeCsv(values[j]));
+            }
+            records.add(record);
         }
-        return operations;
+        return records;
     }
 
     private String[] parseCsvLine(String line) {
         List<String> result = new ArrayList<>();
         boolean inQuotes = false;
         StringBuilder current = new StringBuilder();
+
         for (int i = 0; i < line.length(); i++) {
             char c = line.charAt(i);
             if (c == '"') {
@@ -87,15 +63,12 @@ public class CsvImporter implements Importer {
         return result.toArray(new String[0]);
     }
 
-    private String unescape(String value) {
-        if (value.startsWith("\"") && value.endsWith("\"")) {
+    private String unescapeCsv(String value) {
+        if (value == null) return "";
+        value = value.trim();
+        if (value.startsWith("\"") && value.endsWith("\"") && value.length() > 1) {
             return value.substring(1, value.length() - 1).replace("\"\"", "\"");
         }
         return value;
-    }
-
-    @Override
-    public String getFileExtension() {
-        return "csv";
     }
 }

@@ -1,6 +1,6 @@
 package Bank.repository;
 
-import Bank.domain.BankAccount;
+import Bank.domain.model.BankAccount;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;

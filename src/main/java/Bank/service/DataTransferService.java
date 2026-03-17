@@ -1,84 +1,85 @@
+// Bank.service.DataTransferService
 package Bank.service;
 
-import Bank.domain.BankAccount;
-import Bank.domain.Category;
-import Bank.domain.Operation;
+import Bank.domain.model.BankAccount;
+import Bank.domain.model.Category;
+import Bank.domain.model.Operation;
+import Bank.repository.BankAccountRepository;
+import Bank.repository.CategoryRepository;
+import Bank.repository.OperationRepository;
 import Bank.service.Files.Exporter;
 import Bank.service.Files.Importer;
+import Bank.service.Files.factory.ExporterFactory;
+import Bank.service.Files.factory.ImporterFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
+
 @Service
 public class DataTransferService {
-    private final AccountService accountService;
-    private final CategoryService categoryService;
-    private final OperationService operationService;
 
-    public DataTransferService(AccountService accountService, CategoryService categoryService, OperationService operationService) {
-        this.accountService = accountService;
-        this.categoryService = categoryService;
-        this.operationService = operationService;
+    private final ImporterFactory importerFactory;
+    private final ExporterFactory exporterFactory;
+
+    private final BankAccountRepository accountRepository;
+    private final CategoryRepository categoryRepository;
+    private final OperationRepository operationRepository;
+
+    public DataTransferService(ImporterFactory importerFactory,
+                               ExporterFactory exporterFactory,
+                               BankAccountRepository accountRepository,
+                               CategoryRepository categoryRepository,
+                               OperationRepository operationRepository) {
+        this.importerFactory = importerFactory;
+        this.exporterFactory = exporterFactory;
+        this.accountRepository = accountRepository;
+        this.categoryRepository = categoryRepository;
+        this.operationRepository = operationRepository;
     }
 
-    public void exportAll(String baseFilename, Exporter exporter) throws IOException {
-        String ext = exporter.getFileExtension();
+    public void importAll(String filename, String extension) throws IOException {
+        Importer importer = importerFactory.getImporter(extension);
+        String content = Files.readString(Path.of(filename));
 
-        String accountsData = exporter.exportAccounts(accountService.getAllAccounts());
-        writeToFile(baseFilename + ".accounts." + ext, accountsData);
+        for (BankAccount account : importer.importAccounts(content)) {
+            accountRepository.add(account);
+        }
+        for (Category category : importer.importCategories(content)) {
+            categoryRepository.addCategory(category);
+        }
+        for (Operation operation : importer.importOperations(content)) {
+            operationRepository.addOperation(operation);
+        }
 
-        String categoriesData = exporter.exportCategories(categoryService.getAllCategories());
-        writeToFile(baseFilename + ".categories." + ext, categoriesData);
-
-        String operationsData = exporter.exportOperations(operationService.getAllOperations());
-        writeToFile(baseFilename + ".operations." + ext, operationsData);
+        System.out.println("Данные импортированы из: " + filename);
     }
 
-    public void importAll(String baseFilename, Importer importer) throws IOException {
-        String ext = importer.getFileExtension();
+    public void exportAll(String filename, String extension) throws IOException {
+        Exporter exporter = exporterFactory.getExporter(extension);
 
-        String accountsContent = readFromFile(baseFilename + ".accounts." + ext);
-        List<BankAccount> accounts = importer.importAccounts(accountsContent);
-        for (BankAccount account : accounts) {
-            accountService.createAccount(account.getName(), account.getBalance());
-        }
+        List<BankAccount> accounts = accountRepository.findAll();
+        List<Category> categories = categoryRepository.findAll();
+        List<Operation> operations = operationRepository.findAll();
 
-        String categoriesContent = readFromFile(baseFilename + ".categories." + ext);
-        List<Category> categories = importer.importCategories(categoriesContent);
-        for (Category category : categories) {
-            categoryService.createCategory(category.getName(), category.getFlowDirection());
-        }
+        StringBuilder result = new StringBuilder();
+        result.append(exporter.exportAccounts(accounts));
+        result.append("\n");
+        result.append(exporter.exportCategories(categories));
+        result.append("\n");
+        result.append(exporter.exportOperations(operations));
 
-        String operationsContent = readFromFile(baseFilename + ".operations." + ext);
-        List<Operation> operations = importer.importOperations(operationsContent);
-        for (Operation operation : operations) {
-            BankAccount account = accountService.findById(operation.getBankAccountId());
-            Category category = categoryService.findById(operation.getCattegoryId());
-
-            if (operation.getFlowDirection().isIncome()) {
-                operationService.deposit(account, category, operation.getAmount(), operation.getDescription());
-            } else {
-                operationService.withdraw(account, operation.getAmount(), category, operation.getDescription());
-            }
-        }
+        Files.writeString(Path.of(filename), result.toString());
+        System.out.println("Данные экспортированы в: " + filename);
     }
 
-    private void writeToFile(String filename, String content) throws IOException {
-        Path path = Paths.get(filename);
-        Path parent = path.getParent();
-
-        if (parent != null) {
-            Files.createDirectories(parent);
-        }
-
-        Files.writeString(path, content, StandardCharsets.UTF_8);
+    public boolean canImport(String extension) {
+        return importerFactory.supports(extension);
     }
 
-    private String readFromFile(String filename) throws IOException {
-        return Files.readString(Paths.get(filename), StandardCharsets.UTF_8);
+    public boolean canExport(String extension) {
+        return exporterFactory.supports(extension);
     }
 }

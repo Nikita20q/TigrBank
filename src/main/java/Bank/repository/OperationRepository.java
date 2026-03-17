@@ -1,6 +1,6 @@
 package Bank.repository;
 
-import Bank.domain.Operation;
+import Bank.domain.model.Operation;
 import Bank.domain.enums.FlowDirection;
 import org.springframework.stereotype.Repository;
 
@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public class OperationRepository {
@@ -48,5 +49,20 @@ public class OperationRepository {
 
     public List<Operation> findAll() {
         return getOperations();
+    }
+
+    public Operation findById(UUID id) {
+        return operationRepository.stream()
+                .filter(op -> op.getId().equals(id))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public boolean deleteById(UUID id) {
+        Operation operation = findById(id);
+        if (operation != null) {
+            return operationRepository.remove(operation);
+        }
+        return false;
     }
 }

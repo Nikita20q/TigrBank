@@ -1,72 +1,46 @@
 package Bank.service.Files;
 
-import Bank.domain.BankAccount;
-import Bank.domain.Category;
-import Bank.domain.Operation;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
-public class CsvExporter implements Exporter {
+@Component
+public class CsvExporter extends BaseExporter {
 
     @Override
     public String getFileExtension() {
         return "csv";
     }
+
     @Override
-    public String exportAccounts(List<BankAccount> accounts) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("id,name,balance\n");
-        for (BankAccount account : accounts) {
-            sb.append(escape(account.getId().toString())).append(",")
-                    .append(escape(account.getName())).append(",")
-                    .append(escape(account.getBalance().toString()))
-                    .append("\n");
-        }
-        return sb.toString();
+    protected List<String> getAccountHeaders() {
+        return List.of("id", "name", "balance");
     }
 
     @Override
-    public String exportCategories(List<Category> categories) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("id,name,direction\n");
-        for (Category category : categories) {
-            sb.append(escape(category.getId().toString())).append(",")
-                    .append(escape(category.getName())).append(",")
-                    .append(escape(category.getFlowDirection().name()))
-                    .append("\n");
-        }
-        return sb.toString();
+    protected List<String> getCategoryHeaders() {
+        return List.of("id", "name", "direction");
     }
 
     @Override
-    public String exportOperations(List<Operation>  operations) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("id,account_id,category_id,type,amount,date,description\n");
-        for (Operation operation : operations) {
-            sb.append(escape(operation.getId().toString())).append(",")
-                    .append(escape(operation.getBankAccountId().toString())).append(",")
-                    .append(escape(operation.getCattegoryId().toString())).append(",")
-                    .append(escape(operation.getFlowDirection().name())).append(",")
-                    .append(escape(operation.getAmount().toString())).append(",")
-                    .append(escape(operation.getDate().toString())).append(",")
-                    .append(escape(operation.getDescription()))
-                    .append("\n");
-        }
-        return sb.toString();
+    protected List<String> getOperationHeaders() {
+        return List.of("id", "account_id", "category_id", "type", "amount", "date", "description");
     }
 
-    private String escape(Object value) {
-        if (value == null) {
-            return "";
+    @Override
+    protected String formatRecord(Map<String, String> record) {
+        List<String> values = record.values().stream()
+                .map(this::escapeCsv)
+                .toList();
+        return String.join(",", values);
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
         }
-        String str = value.toString();
-        if (str.isEmpty()) {
-            return "";
-        }
-        if (str.contains(",") || str.contains("\"") || str.contains("\n") || str.contains("\r")) {
-            str = str.replace("\"", "\"\"");
-            return "\"" + str + "\"";
-        }
-        return str;
+        return value;
     }
 }

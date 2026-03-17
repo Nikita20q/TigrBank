@@ -1,7 +1,9 @@
 package Bank.service;
 
-import Bank.domain.Category;
+import Bank.domain.factory.CategoryFactory;
+import Bank.domain.model.Category;
 import Bank.domain.enums.FlowDirection;
+import Bank.domain.params.CategoryParams;
 import Bank.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
 
@@ -11,13 +13,17 @@ import java.util.UUID;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final CategoryFactory categoryFactory;
 
-    public CategoryService(CategoryRepository categoryRepository) {
+    public CategoryService(CategoryRepository categoryRepository, CategoryFactory categoryFactory) {
         this.categoryRepository = categoryRepository;
+        this.categoryFactory = categoryFactory;
     }
 
     public Category createCategory(String name, FlowDirection type) {
-        Category category = new Category(UUID.randomUUID(), name, type);
+        CategoryParams categoryParams = new CategoryParams(UUID.randomUUID(), name, type);
+
+        Category category = categoryFactory.createWithParams(categoryParams);
         categoryRepository.addCategory(category);
         return category;
     }

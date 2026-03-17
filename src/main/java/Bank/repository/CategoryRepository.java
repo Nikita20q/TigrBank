@@ -1,6 +1,6 @@
 package Bank.repository;
 
-import Bank.domain.Category;
+import Bank.domain.model.Category;
 import Bank.domain.enums.FlowDirection;
 import org.springframework.stereotype.Repository;
 

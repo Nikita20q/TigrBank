@@ -22,9 +22,6 @@ public class Main {
         return (args) -> {
             System.out.println("=".repeat(20) + " Запуск ТигрБанка " + "=".repeat(20));
             Scanner scanner = new Scanner(System.in);
-            financeApplication.createAccount("Пользователь-1");
-            financeApplication.createAccount("Пользователь-2");
-            financeApplication.createAccount("Пользователь-3");
             int choice = -1;
             while (choice != 20) {
                 System.out.println("Введите желаемую операцию: ");
@@ -37,7 +34,11 @@ public class Main {
                 System.out.println("7) Аналитика расходов за период.");
                 System.out.println("8) Экспорт в файл.");
                 System.out.println("9) Импорт из файла.");
+                System.out.println("10) Пересчёт баланса");
+                System.out.println("11) Отменить последнюю операцию.");
+                System.out.println("12) Показать историю команд.");
                 System.out.println("0) Вывести всех пользователей.");
+                System.out.println("20) Завершить программу");
                 choice = scanner.nextInt();
                 scanner.nextLine();
                 switch (choice) {
@@ -64,7 +65,7 @@ public class Main {
                         BigDecimal depositAmount = new BigDecimal(scanner.nextLine().trim());
                         System.out.println("Введите название категории: ");
                         String depositCategory = scanner.nextLine();
-                        financeApplication.deposit(idDeposit, depositAmount, depositCategory);
+                        financeApplication.depositWithCommand(idDeposit, depositAmount, depositCategory);
                         break;
                     case 5:
                         System.out.println("Введите id пользователя: ");
@@ -73,7 +74,7 @@ public class Main {
                         BigDecimal withdrawAmount = new BigDecimal(scanner.nextLine().trim());
                         System.out.println("Введите название категории: ");
                         String withdrawCategory = scanner.nextLine();
-                        financeApplication.withdraw(idWithdraw, withdrawAmount, withdrawCategory);
+                        financeApplication.withdrawWithCommand(idWithdraw, withdrawAmount, withdrawCategory);
                         break;
                     case 6:
                         System.out.print("Введите дату начала (ГГГГ-ММ-ДД): ");
@@ -102,13 +103,13 @@ public class Main {
 
                         switch (exp) {
                             case 1:
-                                financeApplication.exportData(expFile, new CsvExporter());
+                                financeApplication.exportData(expFile, "csv");
                                 break;
                             case 2:
-                                financeApplication.exportData(expFile, new JsonExporter());
+                                financeApplication.exportData(expFile, "json");
                                 break;
                             case 3:
-                                financeApplication.exportData(expFile, new YamlExporter());
+                                financeApplication.exportData(expFile, "yaml");
                                 break;
                             default:
                                 System.out.println("Неверный формат.");
@@ -129,13 +130,13 @@ public class Main {
 
                         switch (imp) {
                             case 1:
-                                financeApplication.importData(impFile, new CsvImporter());
+                                financeApplication.importData(impFile, "csv");
                                 break;
                             case 2:
-                                financeApplication.importData(impFile, new JsonImporter());
+                                financeApplication.importData(impFile, "json");
                                 break;
                             case 3:
-                                financeApplication.importData(impFile, new YamlImporter());
+                                financeApplication.importData(impFile, "yaml");
                                 break;
                             default:
                                 System.out.println("Неверный формат.");
@@ -148,8 +149,16 @@ public class Main {
                         String idCheck = scanner.nextLine();
                         financeApplication.recalculateBalance(idCheck);
                         break;
+                    case 11:
+                        financeApplication.undoLast();
+                        break;
+                    case 12:
+                        financeApplication.showCommandHistory();
+                        break;
                     case 0:
                         financeApplication.listAllAccounts();
+                        break;
+                    case 20:
                         break;
                     default:
                         System.out.println("Некорректный ввод, попробуйте ещё раз.");

@@ -1,7 +1,7 @@
 package Bank.service;
 
-import Bank.domain.Category;
-import Bank.domain.Operation;
+import Bank.domain.model.Category;
+import Bank.domain.model.Operation;
 import Bank.domain.enums.FlowDirection;
 import Bank.repository.CategoryRepository;
 import Bank.repository.OperationRepository;
@@ -49,7 +49,7 @@ public class AnalyticsService {
             }
 
 
-            Category category = categoryRepository.findById(operation.getCattegoryId());
+            Category category = categoryRepository.findById(operation.getCategoryId());
 
             if (category == null) {
                 continue;

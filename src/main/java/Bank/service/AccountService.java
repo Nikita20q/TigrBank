@@ -1,6 +1,8 @@
 package Bank.service;
 
-import Bank.domain.BankAccount;
+import Bank.domain.factory.AccountFactory;
+import Bank.domain.model.BankAccount;
+import Bank.domain.params.BankAccountParams;
 import Bank.repository.BankAccountRepository;
 import org.springframework.stereotype.Service;
 
@@ -10,12 +12,15 @@ import java.util.UUID;
 @Service
 public class AccountService {
     private final BankAccountRepository bankAccountRepository;
-    public AccountService(BankAccountRepository bankAccountRepository) {
+    private final AccountFactory accountFactory;
+    public AccountService(BankAccountRepository bankAccountRepository, AccountFactory accountFactory) {
         this.bankAccountRepository = bankAccountRepository;
+        this.accountFactory = accountFactory;
     }
 
     public BankAccount createAccount(String name, BigDecimal balance) {
-        BankAccount bankAccount = new BankAccount(UUID.randomUUID(), name, balance);
+        BankAccountParams entityParams = new BankAccountParams(UUID.randomUUID(), name, balance);
+        BankAccount bankAccount = accountFactory.createWithParams(entityParams);
         bankAccountRepository.add(bankAccount);
         return bankAccount;
     }

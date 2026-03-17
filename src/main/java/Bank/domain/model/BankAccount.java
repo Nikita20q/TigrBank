@@ -1,9 +1,9 @@
-package Bank.domain;
+package Bank.domain.model;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public class BankAccount {
+public class BankAccount implements DomainEntity {
     private final UUID id;
     private String name;
     private BigDecimal balance;
@@ -32,6 +32,8 @@ public class BankAccount {
     public BigDecimal getBalance() {
         return balance;
     }
+
+    @Override
     public UUID getId() {
         return id;
     }
@@ -43,5 +45,9 @@ public class BankAccount {
 
     public String getName() {
         return name;
+    }
+
+    public void setBalance(BigDecimal balance) {
+        this.balance = balance;
     }
 }

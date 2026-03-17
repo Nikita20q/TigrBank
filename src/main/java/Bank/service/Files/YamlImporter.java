@@ -1,105 +1,40 @@
 package Bank.service.Files;
 
-import Bank.domain.BankAccount;
-import Bank.domain.Category;
-import Bank.domain.Operation;
-import Bank.domain.enums.FlowDirection;
+import org.springframework.stereotype.Component;
+import org.yaml.snakeyaml.Yaml;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.*;
 
-public class YamlImporter implements Importer {
-
-    @Override
-    public List<BankAccount> importAccounts(String yamlData) {
-        List<BankAccount> accounts = new ArrayList<>();
-        List<Map<String, String>> items = parseYamlList(yamlData, "accounts");
-        for (Map<String, String> item : items) {
-            UUID id = UUID.fromString(item.get("id"));
-            String name = item.get("name");
-            BigDecimal balance = new BigDecimal(item.get("balance"));
-            accounts.add(new BankAccount(id, name, balance));
-        }
-        return accounts;
-    }
-
-    @Override
-    public List<Category> importCategories(String yamlData) {
-        List<Category> categories = new ArrayList<>();
-        List<Map<String, String>> items = parseYamlList(yamlData, "categories");
-        for (Map<String, String> item : items) {
-            UUID id = UUID.fromString(item.get("id"));
-            String name = item.get("name");
-            FlowDirection direction = FlowDirection.valueOf(item.get("direction"));
-            categories.add(new Category(id, name, direction));
-        }
-        return categories;
-    }
-
-    @Override
-    public List<Operation> importOperations(String yamlData) {
-        List<Operation> operations = new ArrayList<>();
-        List<Map<String, String>> items = parseYamlList(yamlData, "operations");
-        for (Map<String, String> item : items) {
-            UUID id = UUID.fromString(item.get("id"));
-            UUID accountId = UUID.fromString(item.get("account_id"));
-            UUID categoryId = UUID.fromString(item.get("category_id"));
-            FlowDirection direction = FlowDirection.valueOf(item.get("direction"));
-            BigDecimal amount = new BigDecimal(item.get("amount"));
-            LocalDateTime date = LocalDateTime.parse(item.get("date"));
-            String description = item.get("description");
-            operations.add(new Operation(id, accountId, categoryId, direction, amount, date, description));
-        }
-        return operations;
-    }
-
-    // Упрощённый парсер YAML-списка
-    private List<Map<String, String>> parseYamlList(String yaml, String rootKey) {
-        List<Map<String, String>> result = new ArrayList<>();
-        String[] lines = yaml.split("\n");
-        Map<String, String> currentItem = null;
-
-        for (String line : lines) {
-            line = line.trim();
-            if (line.isEmpty()) continue;
-
-            if (line.startsWith("- ")) {
-                // Новый элемент списка
-                if (currentItem != null) {
-                    result.add(currentItem);
-                }
-                currentItem = new HashMap<>();
-                // Обрабатываем первую строку элемента
-                String remainder = line.substring(2);
-                if (remainder.contains(":")) {
-                    String[] kv = remainder.split(":", 2);
-                    String key = kv[0].trim();
-                    String value = kv[1].trim();
-                    if (value.startsWith("\"") && value.endsWith("\"")) {
-                        value = value.substring(1, value.length() - 1);
-                    }
-                    currentItem.put(key, value);
-                }
-            } else if (currentItem != null && line.contains(":")) {
-                // Продолжение текущего элемента
-                String[] kv = line.split(":", 2);
-                String key = kv[0].trim();
-                String value = kv[1].trim();
-                if (value.startsWith("\"") && value.endsWith("\"")) {
-                    value = value.substring(1, value.length() - 1);
-                }
-                currentItem.put(key, value);
-            }
-        }
-        if (currentItem != null) {
-            result.add(currentItem);
-        }
-        return result;
-    }
+@Component
+public class YamlImporter extends BaseImporter {
 
     @Override
     public String getFileExtension() {
         return "yaml";
+    }
+
+    @Override
+    protected List<Map<String, String>> parseRecords(String rawData) {
+        List<Map<String, String>> records = new ArrayList<>();
+
+        Yaml yaml = new Yaml();
+        Object loaded = yaml.load(rawData);
+
+        if (loaded == null) {
+            return records;
+        }
+
+        if (loaded instanceof List) {
+            List<Map<String, Object>> yamlList = (List<Map<String, Object>>) loaded;
+
+            for (Map<String, Object> yamlRecord : yamlList) {
+                Map<String, String> record = new HashMap<>();
+                for (Map.Entry<String, Object> entry : yamlRecord.entrySet()) {
+                    record.put(entry.getKey(), String.valueOf(entry.getValue()));
+                }
+                records.add(record);
+            }
+        }
+        return records;
     }
 }

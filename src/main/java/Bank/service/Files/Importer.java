@@ -1,8 +1,8 @@
 package Bank.service.Files;
 
-import Bank.domain.BankAccount;
-import Bank.domain.Category;
-import Bank.domain.Operation;
+import Bank.domain.model.BankAccount;
+import Bank.domain.model.Category;
+import Bank.domain.model.Operation;
 
 import java.util.List;
 
